@@ -1,100 +1,132 @@
-# Hotel Booking API (ASP.NET Core + EF Core)
+# 🏨 Hotel Booking API – Glasgow (Human Spec)
 
-A small RESTful API for hotel room availability + bookings, built as a take-home style backend exercise.
+A simple, clean ASP.NET Core Web API that exposes hotel search, availability, and booking functionality, along with admin endpoints to reset and seed data.
 
-Local dev uses **SQLite** for zero-setup. It’s also **Azure SQL / SQL Server-ready** via the same EF Core model + migrations.
+This solution is designed to be:
 
-## Quick start
+- Easy to run locally
+- Deterministic (reset + seed supported)
+- Testable via Postman without extra tooling
+- Aligned with a clear, human-readable API spec
+
+---
+
+## 📦 Solution Overview
+
+**Core capabilities**
+
+- Search hotels by name
+- Check room availability for a date range
+- Create a booking
+- Retrieve a booking by reference
+- Reset and seed the database via admin endpoints
+
+**Key projects**
+
+- `HotelBooking.Api` – ASP.NET Core Web API
+- In-memory or lightweight persistence (seed/reset supported by spec)
+
+---
+
+## 🚀 Running the API Locally
+
+### Prerequisites
+
+- .NET SDK (as defined by the solution)
+- No external dependencies required
+
+### Run
 
 ```bash
-# from repo root
-dotnet restore
 dotnet run --project src/HotelBooking.Api
 ```
 
-On first run the API will apply EF Core migrations automatically.
-For testing, seed/reset is exposed explicitly via admin endpoints (per the brief).
+Default base URL:
 
-Open Swagger:
-- `https://localhost:xxxx/swagger`
-
-## Testing flow (in Swagger)
-
-The admin endpoints are intentionally explicit (per spec):
-- `reset` returns deletion counts
-- `seed` is idempotent (safe to call repeatedly)
-
-1. `POST /api/admin/reset`
-2. `POST /api/admin/seed` (seeds Glasgow-themed hotels + rooms)
-3. `GET /api/hotels?name=grand` (find “Grand Central Hotel Glasgow”)
-4. `GET /api/hotels/{hotelId}/availability?...` (check rooms)
-5. `POST /api/bookings` (book a room)
-6. `GET /api/bookings/{reference}` (fetch booking details)
-
-## Business rules covered
-
-- Hotels have 3 room types: `Single`, `Double`, `Deluxe` (**Deluxe capacity = 4**)
-- Hotels have **6 rooms** (seeded as: 2 singles, 2 doubles, 2 deluxes)
-- A room cannot be double-booked for any given night
-- Bookings never require changing rooms (1 booking = 1 room for whole stay)
-- Booking references are unique
-- Room capacity enforced (`guests <= capacity`)
-
-## Design notes (the bits that usually bite)
-
-### Dates are `CheckIn` inclusive / `CheckOut` exclusive
-If you book 10th → 12th, you occupy nights **10th and 11th**.
-This keeps availability math simple and avoids off-by-one surprises.
-
-### Why `RoomNight` exists
-`RoomNight` stores **one row per room per night** and has a unique index on `(RoomId, NightDate)`.
-
-That means:
-- we can reliably prevent double-booking **even under concurrency**
-- booking a stay is “reserve all nights for this room” in a single transaction
-
-It’s intentionally a bit denormalised, but very practical for correctness.
-
-### Booking reference strategy (keep it boring)
-The booking reference is formatted as `GLA-YYYYMMDD-XXXXXX`.
-
-This is intentionally simple:
-- it’s readable and easy to quote over the phone
-- it’s easy to grep in logs (prefix + date)
-- it avoids bespoke encodings/check-digits that don’t buy us much in this domain
-
-Uniqueness is enforced by a database unique index on `Booking.Reference`. The service does a cheap
-existence check before insert to avoid an obvious collision, and the DB remains the source of truth.
-
-## Seeding data (Glasgow flavour)
-
-The seed endpoint creates a few Glasgow-themed hotels (e.g. “Grand Central Hotel Glasgow”, “Blythswood Square Hotel”, “Dakota Glasgow”),
-each with 6 rooms, and one example booking (kept away from the test dates).
-
-## Database configuration
-
-### Default (SQLite)
-`appsettings.json` uses a local SQLite file DB by default.
-
-### Azure SQL / SQL Server
-Set a SQL Server connection string and switch provider in `Program.cs` (see the `// SQL Server` comment).
-In Azure App Service you’d typically set:
-- `ConnectionStrings__Default`
-
-## Tests
-
-`tests/HotelBooking.Tests` contains a basic integration test that:
-- resets + seeds
-- books both available doubles for a date range
-- verifies the third attempt returns `409 Conflict`
-
-Run:
-```bash
-dotnet test
+```
+http://localhost:5000
 ```
 
-## Known limitations / next steps
+---
 
-- No authentication (per brief)
-- No cancellation/modification endpoints (easy to add by removing `RoomNight` rows + marking booking cancelled)
-- No pagination on search endpoints (not needed for the exercise)
+## 🔐 Authentication
+
+No authentication is required (by design, per spec).
+
+---
+
+## 🔁 API Endpoints
+
+### Admin
+
+| Method | Endpoint           | Description                  |
+| ------ | ------------------ | ---------------------------- |
+| POST   | `/api/admin/reset` | Clears all data              |
+| POST   | `/api/admin/seed`  | Seeds initial hotels & rooms |
+
+---
+
+### Hotels
+
+| Method | Endpoint                             | Description        |
+| ------ | ------------------------------------ | ------------------ |
+| GET    | `/api/hotels?name=Glasgow`           | Search hotels      |
+| GET    | `/api/hotels/{hotelId}/availability` | Check availability |
+
+Query parameters:
+
+- `checkIn` – yyyy-MM-dd
+- `checkOut` – yyyy-MM-dd
+- `guests` – integer
+
+---
+
+### Bookings
+
+| Method | Endpoint                    | Description    |
+| ------ | --------------------------- | -------------- |
+| POST   | `/api/bookings`             | Create booking |
+| GET    | `/api/bookings/{reference}` | Get booking    |
+
+---
+
+## 🧪 Testing with Postman
+
+Import the provided Postman collection:
+
+- `HotelBooking.Api.postman_collection.json`
+
+### Collection Variables (examples)
+
+| Variable        | Example               |
+| --------------- | --------------------- |
+| baseUrl         | http://localhost:5201 |
+| hotelSearchName | Glasgow               |
+| checkIn         | 2026-02-01            |
+| checkOut        | 2026-02-03            |
+| guests          | 1                     |
+| roomType        | Single                |
+
+---
+
+## ▶️ Recommended Test Flow
+
+1. **POST** `/api/admin/reset`
+2. **POST** `/api/admin/seed`
+3. **GET** `/api/hotels?name=Glasgow`
+4. **GET** `/api/hotels/{hotelId}/availability`
+5. **POST** `/api/bookings`
+6. **GET** `/api/bookings/{bookingReference}`
+
+---
+
+## 🧠 Notes
+
+- Dates use ISO format
+- Booking reference is generated server-side
+- Reset/Seed endpoints exist purely for testing
+- No auth, rate-limiting, or persistence guarantees
+
+---
+
+Designed for clarity, testability, and human-readable behaviour.
