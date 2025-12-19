@@ -1,0 +1,228 @@
+{
+    "info": {
+        "_postman_id": "6bf900ed-77b1-40e2-a29c-fd8721d03ca0",
+        "name": "HotelBooking.Api - Local",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "Postman collection generated from HotelBooking.Api controllers "
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5201"
+        },
+        {
+            "key": "hotelSearchName",
+            "value": "Glasgow"
+        },
+        {
+            "key": "hotelId",
+            "value": "1"
+        },
+        {
+            "key": "checkIn",
+            "value": "2026-02-01"
+        },
+        {
+            "key": "checkOut",
+            "value": "2026-02-03"
+        },
+        {
+            "key": "guests",
+            "value": "1"
+        },
+        {
+            "key": "roomType",
+            "value": "Single"
+        },
+        {
+            "key": "bookingReference",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "Admin",
+            "item": [
+                {
+                    "name": "Reset database",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/reset",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "admin", "reset"]
+                        }
+                    }
+                },
+                {
+                    "name": "Seed database",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/seed",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "admin", "seed"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Hotels",
+            "item": [
+                {
+                    "name": "Find hotels by name",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/hotels?name={{hotelSearchName}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "hotels"],
+                            "query": [
+                                {
+                                    "key": "name",
+                                    "value": "{{hotelSearchName}}"
+                                }
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                                    "try {",
+                                    "  const data = pm.response.json();",
+                                    "  if (Array.isArray(data) && data.length > 0 && data[0].id) {",
+                                    "    pm.collectionVariables.set('hotelId', String(data[0].id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get availability",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/hotels/{{hotelId}}/availability?checkIn={{checkIn}}&checkOut={{checkOut}}&guests={{guests}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "hotels",
+                                "{{hotelId}}",
+                                "availability"
+                            ],
+                            "query": [
+                                {
+                                    "key": "checkIn",
+                                    "value": "{{checkIn}}"
+                                },
+                                {
+                                    "key": "checkOut",
+                                    "value": "{{checkOut}}"
+                                },
+                                {
+                                    "key": "guests",
+                                    "value": "{{guests}}"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bookings",
+            "item": [
+                {
+                    "name": "Create booking",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"hotelId\": \"{{hotelId}}\",\n  \"roomType\": \"{{roomType}}\",\n  \"checkIn\": \"{{checkIn}}\",\n  \"checkOut\": \"{{checkOut}}\",\n  \"guests\": \"{{guests}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/bookings",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "bookings"]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                                    "try {",
+                                    "  const data = pm.response.json();",
+                                    "  if (data && data.reference) {",
+                                    "    pm.collectionVariables.set('bookingReference', String(data.reference));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get booking by reference",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/bookings/{{bookingReference}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "bookings", "{{bookingReference}}"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
